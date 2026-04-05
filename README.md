@@ -4,23 +4,33 @@ A simple web-based tool to calculate return on investment (ROI) for business ide
 
 It allows you to model Best, Expected, and Worst case scenarios and instantly see how your assumptions impact profitability.
 
-✨ Features
+✨ Features-
 Scenario-based modelling (Best / Expected / Worst)
+
 Real-time calculations
 ROI, profit, revenue, and payback period
+
 Cost vs revenue visualisation
+
 User growth with churn applied
+
 Export results as a text summary
 
-🧮 What It Calculates
+🧮 What It Calculates-
 Total Cost
+
 Total Revenue
+
 Net Profit
+
 ROI (%)
+
 Payback Period
 
 
-🚀 Getting Started
+
+🚀 Getting Started-
+
 Run locally:
 Download or clone the repo
 Open index.html in your browser
@@ -28,9 +38,12 @@ Open index.html in your browser
 Run online:
 https://roi-calculator-two-sand.vercel.app/
 
-🛠 Built With
+🛠 Built With-
+
 HTML
+
 CSS
+
 JavaScript
 
 📄 License
