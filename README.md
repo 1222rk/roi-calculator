@@ -34,4 +34,4 @@ CSS
 JavaScript
 
 📄 License
-Free to use and modify.
+Project is free to use and modify.
