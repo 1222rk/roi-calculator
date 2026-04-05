@@ -1,13 +1,15 @@
-📊 ROI Calculator
+📊 ROI Calculator-
 
 A simple web-based tool to calculate return on investment (ROI) for business ideas and projects.
 
 It allows you to model Best, Expected, and Worst case scenarios and instantly see how your assumptions impact profitability.
 
 ✨ Features-
+
 Scenario-based modelling (Best / Expected / Worst)
 
 Real-time calculations
+
 ROI, profit, revenue, and payback period
 
 Cost vs revenue visualisation
@@ -46,5 +48,6 @@ CSS
 
 JavaScript
 
-📄 License
+📄 License-
+
 Project is free to use and modify.
