@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROI Calculator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --glass: rgba(255,255,255,0.55);
+    --glass-border: rgba(255,255,255,0.85);
+    --glass-hover-border: rgba(79,110,247,0.35);
+    --accent: #4f6ef7;
+    --text: #1a237e;
+    --muted: #7986cb;
+    --green: #00897b;
+    --amber: #f57c00;
+    --red: #c62828;
+    --radius: 18px;
+    --radius-sm: 10px;
+    --blur: blur(16px);
+    --shadow: 0 4px 16px rgba(79,110,247,0.08);
+    --shadow-hover: 0 8px 24px rgba(79,110,247,0.15);
+    --transition: 0.3s ease;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e8f0fe 0%, #f0f4ff 50%, #e4f0fb 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    padding: 24px 16px 56px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(79,110,247,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(100,160,247,0.06) 0%, transparent 55%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  /* ── HEADER ── */
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+    padding: 32px 24px 24px;
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), #7c9bff);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 14px rgba(79,110,247,0.3);
+  }
+  h1 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .subtitle { font-size: 0.92rem; color: var(--muted); margin-top: 4px; }
+  .project-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .project-name-row label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  #projectName {
+    background: rgba(255,255,255,0.65);
+    border: 1px solid rgba(79,110,247,0.2);
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text);
+    font-weight: 700;
+    width: 260px;
+    transition: border-color var(--transition);
+    outline: none;
+  }
+  #projectName:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,110,247,0.1); }
+
+  /* ── SCENARIO TABS ── */
+  .scenario-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 10px;
+    box-shadow: var(--shadow);
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 11px 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; opacity: 0.45; transition: opacity var(--transition); }
+  .tab-btn:hover { color: var(--accent); background: rgba(79,110,247,0.05); }
+  .tab-btn.active { background: rgba(79,110,247,0.1); border-color: rgba(79,110,247,0.3); color: var(--accent); }
+  .tab-btn.active .dot { opacity: 1; }
+  .tab-best  .dot { background: var(--green); }
+  .tab-expected .dot { background: var(--accent); }
+  .tab-worst .dot { background: var(--red); }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 680px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+  }
+  .panel:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--glass-hover-border);
+  }
+  .panel-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* ── INPUT FIELDS ── */
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 420px) { .input-grid { grid-template-columns: 1fr; } }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 0.76rem; font-weight: 600; color: var(--text); opacity: 0.7; }
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.65);
+    border: 1px solid rgba(79,110,247,0.15);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+  .input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,110,247,0.1);
+  }
+  .pfx {
+    padding: 0 9px;
+    font-size: 0.77rem;
+    font-weight: 800;
+    color: var(--accent);
+    background: rgba(79,110,247,0.07);
+    border-right: 1px solid rgba(79,110,247,0.12);
+    height: 38px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .input-wrap input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text);
+    outline: none;
+    min-width: 0;
+  }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { opacity: 0.35; }
+
+  /* ── RESULTS ── */
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .metric-card {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.75);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+  }
+  .metric-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .metric-value {
+    font-size: 1.28rem;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.025em;
+    transition: color var(--transition);
+  }
+  .metric-value.pos { color: var(--green); }
+  .metric-value.neg { color: var(--red); }
+  .metric-sub { font-size: 0.69rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── CHART ── */
+  .chart-panel { grid-column: 1 / -1; }
+  .chart-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 40px;
+    justify-content: center;
+    height: 180px;
+    padding: 0 24px;
+    position: relative;
+  }
+  .chart-area::after {
+    content: '';
+    position: absolute;
+    left: 24px; right: 24px; bottom: 0;
+    height: 1px;
+    background: rgba(79,110,247,0.18);
+  }
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    flex: 1;
+    max-width: 160px;
+  }
+  .bar-top-label {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--text);
+    transition: all var(--transition);
+    white-space: nowrap;
+  }
+  .bar {
+    width: 100%;
+    max-width: 90px;
+    border-radius: 9px 9px 3px 3px;
+    transition: height var(--transition), background var(--transition);
+    min-height: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .bar::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 35%;
+    background: rgba(255,255,255,0.22);
+    border-radius: 9px 9px 0 0;
+  }
+  .bar-cost    { background: linear-gradient(180deg, #9fa8da, #7986cb); }
+  .bar-revenue { background: linear-gradient(180deg, #80cbc4, #00897b); }
+  .bar-bot-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── VERDICT ── */
+  .verdict-panel {
+    margin-bottom: 20px;
+    padding: 20px 24px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all var(--transition);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid transparent;
+    box-shadow: var(--shadow);
+  }
+  .verdict-panel.vgreen { background: rgba(0,137,123,0.1);  border-color: rgba(0,137,123,0.28); }
+  .verdict-panel.vamber { background: rgba(245,124,0,0.09); border-color: rgba(245,124,0,0.28); }
+  .verdict-panel.vred   { background: rgba(198,40,40,0.09); border-color: rgba(198,40,40,0.28); }
+  .verdict-icon { font-size: 2rem; line-height: 1; flex-shrink: 0; }
+  .verdict-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    transition: color var(--transition);
+  }
+  .verdict-panel.vgreen .verdict-title { color: var(--green); }
+  .verdict-panel.vamber .verdict-title { color: var(--amber); }
+  .verdict-panel.vred   .verdict-title { color: var(--red); }
+  .verdict-msg { font-size: 0.83rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+  /* ── ACTIONS ── */
+  .actions-row {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all var(--transition);
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #4f6ef7, #6b84f8);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(79,110,247,0.28);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 22px rgba(79,110,247,0.44); transform: translateY(-1px); }
+  .btn-ghost {
+    background: var(--glass);
+    backdrop-filter: var(--blur);
+    border-color: rgba(79,110,247,0.2);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,110,247,0.06); }
+
+  @media (max-width: 480px) {
+    .metric-value { font-size: 1.05rem; }
+    .chart-area { height: 130px; gap: 20px; }
+    .tab-btn { font-size: 0.8rem; padding: 9px 10px; }
+    .panel { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">📊</div>
+      <h1>ROI Calculator</h1>
+    </div>
+    <p class="subtitle">Model your business case across Best, Expected &amp; Worst scenarios</p>
+    <div class="project-name-row">
+      <label for="projectName">Project</label>
+      <input type="text" id="projectName" placeholder="Untitled Project" value="New Product Launch">
+    </div>
+  </header>
+
+  <!-- SCENARIO TABS -->
+  <div class="scenario-bar">
+    <button class="tab-btn tab-best active" data-sc="best" onclick="switchScenario('best')">
+      <span class="dot"></span>Best Case
+    </button>
+    <button class="tab-btn tab-expected" data-sc="expected" onclick="switchScenario('expected')">
+      <span class="dot"></span>Expected
+    </button>
+    <button class="tab-btn tab-worst" data-sc="worst" onclick="switchScenario('worst')">
+      <span class="dot"></span>Worst Case
+    </button>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- INPUTS PANEL -->
+    <div class="panel">
+      <div class="panel-title">⚙️&nbsp; Inputs</div>
+      <div class="input-grid">
+
+        <div class="field">
+          <label>Development Cost</label>
+          <div class="input-wrap"><span class="pfx">£</span>
+            <input type="number" id="devCost" min="0" step="1000" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Marketing Spend</label>
+          <div class="input-wrap"><span class="pfx">£</span>
+            <input type="number" id="mktSpend" min="0" step="500" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Monthly Ops Cost</label>
+          <div class="input-wrap"><span class="pfx">£/mo</span>
+            <input type="number" id="opsCost" min="0" step="100" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Time Horizon</label>
+          <div class="input-wrap"><span class="pfx">mo</span>
+            <input type="number" id="timeHorizon" min="1" max="120" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Expected New Users</label>
+          <div class="input-wrap"><span class="pfx">#</span>
+            <input type="number" id="newUsers" min="0" step="100" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>ARPU (monthly)</label>
+          <div class="input-wrap"><span class="pfx">£</span>
+            <input type="number" id="arpu" min="0" step="1" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Existing User Uplift</label>
+          <div class="input-wrap"><span class="pfx">£/mo</span>
+            <input type="number" id="uplift" min="0" step="100" oninput="calculate()">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Monthly Churn Rate</label>
+          <div class="input-wrap"><span class="pfx">%</span>
+            <input type="number" id="churn" min="0" max="100" step="0.1" oninput="calculate()">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="panel">
+      <div class="panel-title">📈&nbsp; Results</div>
+      <div class="results-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Cost</div>
+          <div class="metric-value" id="r-cost">—</div>
+          <div class="metric-sub">over full horizon</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Revenue</div>
+          <div class="metric-value" id="r-rev">—</div>
+          <div class="metric-sub">cumulative</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">ROI</div>
+          <div class="metric-value" id="r-roi">—</div>
+          <div class="metric-sub">return on investment</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Payback Period</div>
+          <div class="metric-value" id="r-payback">—</div>
+          <div class="metric-sub">months to break even</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Net Profit</div>
+          <div class="metric-value" id="r-profit">—</div>
+          <div class="metric-sub">revenue minus costs</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">End-of-Horizon Users</div>
+          <div class="metric-value" id="r-users">—</div>
+          <div class="metric-sub">after churn applied</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART (full width) -->
+    <div class="panel chart-panel">
+      <div class="panel-title">📊&nbsp; Cost vs Revenue</div>
+      <div class="chart-area">
+        <div class="bar-group">
+          <div class="bar-top-label" id="chart-cost-lbl">£0</div>
+          <div class="bar bar-cost" id="bar-cost" style="height:4px"></div>
+          <div class="bar-bot-label">Total Cost</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-top-label" id="chart-rev-lbl">£0</div>
+          <div class="bar bar-revenue" id="bar-rev" style="height:4px"></div>
+          <div class="bar-bot-label">Total Revenue</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-grid -->
+
+  <!-- VERDICT BANNER -->
+  <div class="verdict-panel vgreen" id="verdictPanel">
+    <div class="verdict-icon" id="verdictIcon">🚀</div>
+    <div>
+      <div class="verdict-title" id="verdictTitle">Enter your numbers to see your verdict</div>
+      <div class="verdict-msg" id="verdictMsg">Fill in the inputs panel and results will update instantly.</div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="actions-row">
+    <button class="btn btn-ghost" onclick="resetDefaults()">↺&nbsp; Reset to Defaults</button>
+    <button class="btn btn-primary" onclick="exportSummary()">⬇&nbsp; Export Summary</button>
+  </div>
+
+</div><!-- /wrapper -->
+<script>
+// ─── DEFAULTS ───────────────────────────────────────────────────────────────
+const DEFAULTS = {
+  best:     { devCost:80000,  mktSpend:25000, opsCost:3000, timeHorizon:18, newUsers:5000, arpu:29, uplift:4000, churn:2   },
+  expected: { devCost:120000, mktSpend:40000, opsCost:5000, timeHorizon:18, newUsers:2500, arpu:25, uplift:2000, churn:4   },
+  worst:    { devCost:180000, mktSpend:55000, opsCost:8000, timeHorizon:18, newUsers:800,  arpu:20, uplift:800,  churn:8   }
+};
+const FIELDS = ['devCost','mktSpend','opsCost','timeHorizon','newUsers','arpu','uplift','churn'];
+
+let currentSc = 'best';
+let scenarios  = { best:{...DEFAULTS.best}, expected:{...DEFAULTS.expected}, worst:{...DEFAULTS.worst} };
+
+// ─── FORMAT HELPERS ─────────────────────────────────────────────────────────
+function fmt(n) {
+  if (!isFinite(n)) return '—';
+  const abs = Math.abs(n);
+  let s;
+  if (abs >= 1e6)       s = (n/1e6).toFixed(1).replace(/\.0$/,'') + 'm';
+  else if (abs >= 1e3)  s = (n/1e3).toFixed(1).replace(/\.0$/,'') + 'k';
+  else                  s = Math.round(n).toString();
+  return (n < 0 ? '-£' : '£') + s.replace('-','');
+}
+function fmtPct(n) { return !isFinite(n) ? '—' : (n>=0?'+':'') + n.toFixed(1) + '%'; }
+function fmtUsers(n) { return n >= 1000 ? (n/1000).toFixed(1).replace(/\.0$/,'') + 'k' : Math.round(n).toString(); }
+
+// ─── CORE MATHS ─────────────────────────────────────────────────────────────
+function compute(v) {
+  const months = Math.max(1, Math.round(v.timeHorizon));
+  const rate   = Math.min(v.churn, 99) / 100;
+
+  const fixedCost    = v.devCost + v.mktSpend;
+  const totalOpsCost = v.opsCost * months;
+  const totalCost    = fixedCost + totalOpsCost;
+
+  let revenue = 0, users = v.newUsers;
+  for (let m = 1; m <= months; m++) {
+    revenue += users * v.arpu + v.uplift;
+    users   *= (1 - rate);
+  }
+
+  const profit  = revenue - totalCost;
+  const roi     = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+  const endUsers = Math.round(users);
+
+  // Payback
+  let cum = 0, payback = null, pu = v.newUsers;
+  for (let m = 1; m <= Math.max(months * 4, 120); m++) {
+    cum    += pu * v.arpu + v.uplift - v.opsCost;
+    pu     *= (1 - rate);
+    if (cum >= fixedCost && payback === null) payback = m;
+  }
+
+  return { totalCost, revenue, profit, roi, payback, endUsers };
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function getVals() {
+  const v = {};
+  FIELDS.forEach(f => { v[f] = parseFloat(document.getElementById(f).value) || 0; });
+  return v;
+}
+
+function calculate() {
+  // Persist to scenario store
+  FIELDS.forEach(f => { scenarios[currentSc][f] = parseFloat(document.getElementById(f).value) || 0; });
+
+  const v = getVals();
+  const { totalCost, revenue, profit, roi, payback, endUsers } = compute(v);
+
+  // Results
+  document.getElementById('r-cost').textContent    = fmt(totalCost);
+  document.getElementById('r-rev').textContent     = fmt(revenue);
+  document.getElementById('r-roi').textContent     = fmtPct(roi);
+  document.getElementById('r-payback').textContent = payback ? payback + ' mo' : '> horizon';
+  document.getElementById('r-profit').textContent  = fmt(profit);
+  document.getElementById('r-users').textContent   = fmtUsers(endUsers);
+
+  ['r-roi','r-profit'].forEach(id => {
+    const el = document.getElementById(id);
+    const val = id === 'r-roi' ? roi : profit;
+    el.className = 'metric-value ' + (val >= 0 ? 'pos' : 'neg');
+  });
+  document.getElementById('r-payback').className = 'metric-value ' + (payback ? 'pos' : 'neg');
+
+  // Chart
+  const maxVal = Math.max(totalCost, revenue, 1);
+  const H = 155;
+  const costH = Math.max(4, totalCost / maxVal * H);
+  const revH  = Math.max(4, revenue  / maxVal * H);
+  document.getElementById('bar-cost').style.height = costH + 'px';
+  document.getElementById('bar-rev').style.height  = revH  + 'px';
+  document.getElementById('chart-cost-lbl').textContent = fmt(totalCost);
+  document.getElementById('chart-rev-lbl').textContent  = fmt(revenue);
+
+  // Verdict
+  const vp    = document.getElementById('verdictPanel');
+  const vIcon = document.getElementById('verdictIcon');
+  const vT    = document.getElementById('verdictTitle');
+  const vM    = document.getElementById('verdictMsg');
+
+  if (roi >= 20) {
+    vp.className = 'verdict-panel vgreen';
+    vIcon.textContent = '🚀';
+    vT.textContent = 'Strong Return — Go for it!';
+    vM.textContent = `ROI of ${fmtPct(roi)} comfortably exceeds the 20% threshold. ${payback ? 'Investment pays back in ' + payback + ' months, generating ' : 'Project generates a '}${fmt(profit)} net profit over the ${v.timeHorizon}-month horizon.`;
+  } else if (roi >= 0) {
+    vp.className = 'verdict-panel vamber';
+    vIcon.textContent = '⚠️';
+    vT.textContent = 'Marginal Return — Proceed with Caution';
+    vM.textContent = `ROI of ${fmtPct(roi)} is positive but below the 20% target. Consider raising ARPU, cutting costs, or extending your time horizon to strengthen the case.`;
+  } else {
+    vp.className = 'verdict-panel vred';
+    vIcon.textContent = '🔴';
+    vT.textContent = 'Negative ROI — Needs Review';
+    vM.textContent = `The project loses ${fmt(Math.abs(profit))} over ${v.timeHorizon} months. Revisit growth targets, pricing, or cost assumptions before proceeding.`;
+  }
+}
+
+// ─── SCENARIO SWITCHING ──────────────────────────────────────────────────────
+function switchScenario(sc) {
+  FIELDS.forEach(f => { scenarios[currentSc][f] = parseFloat(document.getElementById(f).value) || 0; });
+  currentSc = sc;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.sc === sc));
+  FIELDS.forEach(f => { document.getElementById(f).value = scenarios[sc][f]; });
+  calculate();
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function resetDefaults() {
+  scenarios = { best:{...DEFAULTS.best}, expected:{...DEFAULTS.expected}, worst:{...DEFAULTS.worst} };
+  FIELDS.forEach(f => { document.getElementById(f).value = scenarios[currentSc][f]; });
+  calculate();
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportSummary() {
+  const proj = document.getElementById('projectName').value.trim() || 'Untitled Project';
+  const v    = getVals();
+  const { totalCost, revenue, profit, roi, payback, endUsers } = compute(v);
+  const scLabel = { best:'Best Case', expected:'Expected', worst:'Worst Case' }[currentSc];
+  const verdict = roi >= 20 ? 'Strong Return (≥20% ROI)' : roi >= 0 ? 'Marginal Return (0–20% ROI)' : 'Negative ROI';
+  const now  = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+  const lines = [
+    '═══════════════════════════════════════════════',
+    '  ROI BUSINESS CASE SUMMARY',
+    `  ${proj}`,
+    '═══════════════════════════════════════════════',
+    `  Generated : ${now}`,
+    `  Scenario  : ${scLabel}`,
+    '',
+    '── INPUTS ──────────────────────────────────────',
+    `  Development Cost      : ${fmt(v.devCost)}`,
+    `  Marketing Spend       : ${fmt(v.mktSpend)}`,
+    `  Monthly Ops Cost      : ${fmt(v.opsCost)} / month`,
+    `  Time Horizon          : ${v.timeHorizon} months`,
+    `  Expected New Users    : ${v.newUsers.toLocaleString()}`,
+    `  ARPU (monthly)        : ${fmt(v.arpu)}`,
+    `  Existing User Uplift  : ${fmt(v.uplift)} / month`,
+    `  Monthly Churn Rate    : ${v.churn}%`,
+    '',
+    '── RESULTS ─────────────────────────────────────',
+    `  Total Cost            : ${fmt(totalCost)}`,
+    `  Total Revenue         : ${fmt(revenue)}`,
+    `  Net Profit            : ${fmt(profit)}`,
+    `  ROI                   : ${fmtPct(roi)}`,
+    `  Payback Period        : ${payback ? payback + ' months' : 'Beyond modelled horizon'}`,
+    `  End-of-Horizon Users  : ${endUsers.toLocaleString()}`,
+    '',
+    '── VERDICT ─────────────────────────────────────',
+    `  ${verdict}`,
+    '',
+    '═══════════════════════════════════════════════',
+    '  Generated by ROI Calculator',
+    '═══════════════════════════════════════════════',
+  ].join('\n');
+
+  const blob = new Blob([lines], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = proj.replace(/[^a-z0-9]/gi,'_') + '_ROI_' + scLabel.replace(/ /g,'_') + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+FIELDS.forEach(f => { document.getElementById(f).value = scenarios[currentSc][f]; });
+calculate();
+</script>
+</body>
+</html>
